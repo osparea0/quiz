@@ -1,11 +1,15 @@
 package main
 
-import "errors"
+import (
+	"errors"
+	"log/slog"
+	"sort"
+)
 
 type Quizzer interface {
 	Generate() (error, []Question)
 	Grade(player Player, submittedQuestions []Question) (error, float32)
-	PercentageOverall() (error, float32)
+	PercentageOverall(playerId int64) (error, float32)
 }
 
 type Games struct {
@@ -23,9 +27,33 @@ type Quiz struct {
 func (q Quiz) Grade(id int64) (error, float32) {
 	for i := 0; i < len(q.Players); i++ {
 		if q.Players[i].Id == id {
+			err, score := computeGrade(q.Players[i].Answers, q.Questions)
+			if err != nil {
+				slog.Error("failed to compute grade", "error", err)
+				return err, 0
+			}
+			return nil, score
 		}
 	}
 	return nil, 0
+}
+
+func (q Quiz) PercentageOverall(playerId int64) (error, float32) {
+	var idIndex int
+	var total float32 = 0
+	sort.Slice(q.Players, func(i, j int) bool {
+		return q.Players[i].Score < q.Players[j].Score
+	})
+	for i := range q.Players {
+		if q.Players[i].Id == playerId {
+			idIndex = i
+		}
+	}
+	if idIndex == 0 {
+		return nil, 0
+	}
+	percentile := len(q.Players) / idIndex
+	return nil, float32(percentile)
 }
 
 func (q Quiz) Generate() (error, []Question) {
