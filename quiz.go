@@ -1,8 +1,8 @@
 package main
 
 type Quizzer interface {
-	Generate() (error, questions []Question)
-	Grade(submittedQuestions []Question) (error, grade float32)
+	Generate() (error, []Question)
+	Grade(submittedQuestions []Question) (error, float32)
 	PercentageOverall() (error, float32)
 }
 
