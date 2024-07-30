@@ -1,8 +1,10 @@
 package main
 
+import "errors"
+
 type Quizzer interface {
 	Generate() (error, []Question)
-	Grade(submittedQuestions []Question) (error, float32)
+	Grade(player Player, submittedQuestions []Question) (error, float32)
 	PercentageOverall() (error, float32)
 }
 
@@ -17,6 +19,31 @@ type Quiz struct {
 	Questions []Question `json:"questions"`
 }
 
+// Grade takes the player id and computes their grade
+func (q Quiz) Grade(id int64) (error, float32) {
+	for i := 0; i < len(q.Players); i++ {
+		if q.Players[i].Id == id {
+		}
+	}
+	return nil, 0
+}
+
+func (q Quiz) Generate() (error, []Question) {
+	questions := make([]Question, 5)
+	questions[0].Question = "What color is the sun?"
+	questions[0].Answers = createAnswers("Blue", false, "green", false, "yellow", true, "black", false)
+	questions[1].Question = "Amazon does not have which of these named services?"
+	questions[1].Answers = createAnswers("Route 53", false, "Elastic Container Registry", false, "Elastic Beanstalk", false, "Elastic Monkey", true)
+	questions[2].Question = "Which of these are not google cloud services?"
+	questions[2].Answers = createAnswers("Cloud Run", false, "Cloud SQL", false, "GKE", false, "Cloud Slide", true)
+	questions[3].Question = "What color is the sea?"
+	questions[3].Answers = createAnswers("Yellow", false, "Purple", false, "Black", false, "Blue", true)
+	questions[4].Question = "Which subnet mask is the largest (provides the most IP addresses?"
+	questions[4].Answers = createAnswers("/32", false, "/29", false, "/27", false, "/16", true)
+
+	return nil, questions
+}
+
 // Player is the struct to hold the history of a single players past quizzes
 type Player struct {
 	Name    string     `json:"name"`
@@ -28,8 +55,8 @@ type Player struct {
 
 // Question struct holds a single question and all of it's answers
 type Question struct {
-	Question string    `json:"question"`
-	Answers  []Answers `json:"answers"`
+	Question string  `json:"question"`
+	Answers  Answers `json:"answers"`
 }
 
 // Answer holds all possible answers for a single question and is comprised of Answer structs
@@ -44,6 +71,29 @@ type Answers struct {
 type Answer struct {
 	Answer string `json:"answer"`
 	IsTrue bool   `json:"is_true"`
+}
+
+func createAnswers(ans1 string, ans1bool bool, ans2 string, ans2bool bool, ans3 string, ans3bool bool, ans4 string, ans4bool bool) Answers {
+	Answer1 := Answer{Answer: ans1, IsTrue: ans1bool}
+	Answer2 := Answer{Answer: ans2, IsTrue: ans2bool}
+	Answer3 := Answer{Answer: ans3, IsTrue: ans3bool}
+	Answer4 := Answer{Answer: ans4, IsTrue: ans4bool}
+	return Answers{Answer1: Answer1, Answer2: Answer2, Answer3: Answer3, Answer4: Answer4}
+}
+
+func computeGrade(submittedAnswers []Question, correctAnswers []Question) (error, float32) {
+	count := 0
+	if len(submittedAnswers) != len(correctAnswers) {
+		return errors.New("number of submitted answers do not match number of questions"), 0
+	}
+	for i := 0; i < len(submittedAnswers[i].Question); i++ {
+		if submittedAnswers[i].Answers == correctAnswers[i].Answers {
+			count++
+		}
+	}
+	score := float32(len(submittedAnswers) / count)
+
+	return nil, score
 }
 
 // HasOnlyOneTrue ensures there is only one true answer
