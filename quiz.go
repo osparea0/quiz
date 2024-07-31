@@ -3,12 +3,13 @@ package main
 import (
 	"errors"
 	"log/slog"
+	"math/rand/v2"
 	"sort"
 )
 
 type Quizzer interface {
 	Generate() (error, []Question)
-	Grade(player Player, submittedQuestions []Question) (error, float32)
+	Grade(ID int64) (error, float32)
 	PercentageOverall(playerId int64) (error, float32)
 }
 
@@ -23,6 +24,16 @@ type Quiz struct {
 	Questions []Question `json:"questions"`
 }
 
+func NewQuiz() Quiz {
+	q := Quiz{}
+	err, questions := q.Generate()
+	if err != nil {
+		slog.Error(err.Error())
+		return q
+	}
+	return Quiz{Id: rand.Int64(), Questions: questions}
+}
+
 // Grade takes the player id and computes their grade
 func (q Quiz) Grade(id int64) (error, float32) {
 	for i := 0; i < len(q.Players); i++ {
@@ -35,12 +46,11 @@ func (q Quiz) Grade(id int64) (error, float32) {
 			return nil, score
 		}
 	}
-	return nil, 0
+	return errors.New("failed to find player's game record in history"), 0
 }
 
 func (q Quiz) PercentageOverall(playerId int64) (error, float32) {
 	var idIndex int
-	var total float32 = 0
 	sort.Slice(q.Players, func(i, j int) bool {
 		return q.Players[i].Score < q.Players[j].Score
 	})
@@ -114,7 +124,7 @@ func computeGrade(submittedAnswers []Question, correctAnswers []Question) (error
 	if len(submittedAnswers) != len(correctAnswers) {
 		return errors.New("number of submitted answers do not match number of questions"), 0
 	}
-	for i := 0; i < len(submittedAnswers[i].Question); i++ {
+	for i := 0; i < len(submittedAnswers); i++ {
 		if submittedAnswers[i].Answers == correctAnswers[i].Answers {
 			count++
 		}
@@ -125,19 +135,19 @@ func computeGrade(submittedAnswers []Question, correctAnswers []Question) (error
 }
 
 // HasOnlyOneTrue ensures there is only one true answer
-func (a Answers) HasOnlyOneTrue() bool {
+func HasOnlyOneTrue(q Question) bool {
 	counter := 0
 
-	if a.Answer1.IsTrue {
+	if q.Answers.Answer1.IsTrue {
 		counter++
 	}
-	if a.Answer2.IsTrue {
+	if q.Answers.Answer2.IsTrue {
 		counter++
 	}
-	if a.Answer3.IsTrue {
+	if q.Answers.Answer3.IsTrue {
 		counter++
 	}
-	if a.Answer4.IsTrue {
+	if q.Answers.Answer4.IsTrue {
 		counter++
 	}
 	return counter == 1
