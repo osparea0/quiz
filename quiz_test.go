@@ -106,6 +106,36 @@ func TestQuiz_Grade(t *testing.T) {
 }
 
 func TestQuiz_PercentageOverall(t *testing.T) {
+	q := NewQuiz()
+	submittedAnswersWithOneWrong := make([]Question, 5)
+	submittedAnswersWithOneWrong[0].Question = "What color is the sun?"
+	submittedAnswersWithOneWrong[0].Answers = createAnswers("Blue", false, "green", false, "yellow", true, "black", false)
+	submittedAnswersWithOneWrong[1].Question = "Amazon does not have which of these named services?"
+	submittedAnswersWithOneWrong[1].Answers = createAnswers("Route 53", false, "Elastic Container Registry", false, "Elastic Beanstalk", false, "Elastic Monkey", true)
+	submittedAnswersWithOneWrong[2].Question = "Which of these are not google cloud services?"
+	submittedAnswersWithOneWrong[2].Answers = createAnswers("Cloud Run", false, "Cloud SQL", false, "GKE", false, "Cloud Slide", true)
+	submittedAnswersWithOneWrong[3].Question = "What color is the sea?"
+	submittedAnswersWithOneWrong[3].Answers = createAnswers("Yellow", false, "Purple", false, "Black", false, "Blue", true)
+	submittedAnswersWithOneWrong[4].Question = "Which subnet mask is the largest (provides the most IP addresses?"
+	submittedAnswersWithOneWrong[4].Answers = createAnswers("/32", true, "/29", false, "/27", false, "/16", false)
+	players := make([]Player, 2)
+	players[0] = Player{
+		Name:    "Test Player 1",
+		Id:      0,
+		QuizId:  q.Id,
+		Answers: q.Questions,
+		Score:   0,
+	}
+	players[1] = Player{
+		Name:    "Test Player 2",
+		Id:      1,
+		QuizId:  q.Id,
+		Answers: submittedAnswersWithOneWrong,
+		Score:   0,
+	}
+
+	q.Players = players
+
 	type fields struct {
 		Id        int64
 		Players   []Player
@@ -121,7 +151,12 @@ func TestQuiz_PercentageOverall(t *testing.T) {
 		want   error
 		want1  float32
 	}{
-		// TODO: Add test cases.
+		{name: "top 50 percentile", fields: fields{
+			Id:        1,
+			Players:   q.Players,
+			Questions: q.Questions,
+		}, args: args{playerId: 0},
+			want: nil, want1: .50},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
@@ -136,59 +171,6 @@ func TestQuiz_PercentageOverall(t *testing.T) {
 			}
 			if got1 != tt.want1 {
 				t.Errorf("PercentageOverall() got1 = %v, want %v", got1, tt.want1)
-			}
-		})
-	}
-}
-
-func Test_computeGrade(t *testing.T) {
-	type args struct {
-		submittedAnswers []Question
-		correctAnswers   []Question
-	}
-	tests := []struct {
-		name  string
-		args  args
-		want  error
-		want1 float32
-	}{
-		// TODO: Add test cases.
-	}
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			got, got1 := computeGrade(tt.args.submittedAnswers, tt.args.correctAnswers)
-			if !reflect.DeepEqual(got, tt.want) {
-				t.Errorf("computeGrade() got = %v, want %v", got, tt.want)
-			}
-			if got1 != tt.want1 {
-				t.Errorf("computeGrade() got1 = %v, want %v", got1, tt.want1)
-			}
-		})
-	}
-}
-
-func Test_createAnswers(t *testing.T) {
-	type args struct {
-		ans1     string
-		ans1bool bool
-		ans2     string
-		ans2bool bool
-		ans3     string
-		ans3bool bool
-		ans4     string
-		ans4bool bool
-	}
-	tests := []struct {
-		name string
-		args args
-		want Answers
-	}{
-		// TODO: Add test cases.
-	}
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			if got := createAnswers(tt.args.ans1, tt.args.ans1bool, tt.args.ans2, tt.args.ans2bool, tt.args.ans3, tt.args.ans3bool, tt.args.ans4, tt.args.ans4bool); !reflect.DeepEqual(got, tt.want) {
-				t.Errorf("createAnswers() = %v, want %v", got, tt.want)
 			}
 		})
 	}

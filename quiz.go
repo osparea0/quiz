@@ -43,13 +43,29 @@ func (q Quiz) Grade(id int64) (error, float32) {
 				slog.Error("failed to compute grade", "error", err)
 				return err, 0
 			}
+
+			q.Players[i].Score = score
 			return nil, score
 		}
 	}
 	return errors.New("failed to find player's game record in history"), 0
 }
 
+func (q Quiz) GradeAll() error {
+	for i := range q.Players {
+		err, _ := q.Grade(q.Players[i].Id)
+		if err != nil {
+			slog.Error("failed to grade all in quiz", "error", err)
+			return err
+		}
+	}
+	return nil
+}
 func (q Quiz) PercentageOverall(playerId int64) (error, float32) {
+	err := q.GradeAll()
+	if err != nil {
+		return err, 0
+	}
 	var idIndex int
 	sort.Slice(q.Players, func(i, j int) bool {
 		return q.Players[i].Score < q.Players[j].Score
@@ -62,8 +78,8 @@ func (q Quiz) PercentageOverall(playerId int64) (error, float32) {
 	if idIndex == 0 {
 		return nil, 0
 	}
-	percentile := len(q.Players) / idIndex
-	return nil, float32(percentile)
+	percentile := float32(idIndex) / float32(len(q.Players))
+	return nil, percentile
 }
 
 func (q Quiz) Generate() (error, []Question) {
