@@ -7,7 +7,7 @@ import (
 
 func TestAnswers_HasOnlyOneTrue(t *testing.T) {
 	q := NewQuiz()
-	_, questions := q.Generate()
+	questions, _ := q.Generate()
 
 	qs := make([]Question, 5)
 	qs[1].Question = "What color is the sun?"
@@ -33,7 +33,7 @@ func TestAnswers_HasOnlyOneTrue(t *testing.T) {
 
 func TestQuiz_Grade(t *testing.T) {
 	q := NewQuiz()
-	_, questions := q.Generate()
+	questions, _ := q.Generate()
 	submittedAnswersWithOneWrong := make([]Question, 5)
 	submittedAnswersWithOneWrong[0].Question = "What color is the sun?"
 	submittedAnswersWithOneWrong[0].Answers = createAnswers("Blue", false, "green", false, "yellow", true, "black", false)
@@ -94,7 +94,7 @@ func TestQuiz_Grade(t *testing.T) {
 				Players:   tt.fields.Players,
 				Questions: tt.fields.Questions,
 			}
-			got, got1 := q.Grade(tt.args.id)
+			got1, got := q.Grade(tt.args.id)
 			if !reflect.DeepEqual(got, tt.want) {
 				t.Errorf("Grade() got = %v, want %v", got, tt.want)
 			}
@@ -165,7 +165,7 @@ func TestQuiz_PercentageOverall(t *testing.T) {
 				Players:   tt.fields.Players,
 				Questions: tt.fields.Questions,
 			}
-			got, got1 := q.PercentageOverall(tt.args.playerId)
+			got1, got := q.PercentageOverall(tt.args.playerId)
 			if !reflect.DeepEqual(got, tt.want) {
 				t.Errorf("PercentageOverall() got = %v, want %v", got, tt.want)
 			}

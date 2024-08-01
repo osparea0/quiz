@@ -8,9 +8,9 @@ import (
 )
 
 type Quizzer interface {
-	Generate() (error, []Question)
-	Grade(ID int64) (error, float32)
-	PercentageOverall(playerId int64) (error, float32)
+	Generate() ([]Question, error)
+	Grade(ID int64) (float32, error)
+	PercentageOverall(playerId int64) (float32, error)
 }
 
 // Quiz struct holds the fields for a single quiz and implements the Quizzer interface
@@ -22,7 +22,7 @@ type Quiz struct {
 
 func NewQuiz() Quiz {
 	q := Quiz{}
-	err, questions := q.Generate()
+	questions, err := q.Generate()
 	if err != nil {
 		slog.Error(err.Error())
 		return q
@@ -35,25 +35,25 @@ func NewQuiz() Quiz {
 }
 
 // Grade takes the player id and computes their grade
-func (q Quiz) Grade(id int64) (error, float32) {
+func (q Quiz) Grade(ID int64) (float32, error) {
 	for i := 0; i < len(q.Players); i++ {
-		if q.Players[i].Id == id {
+		if q.Players[i].Id == ID {
 			err, score := computeGrade(q.Players[i].Answers, q.Questions)
 			if err != nil {
 				slog.Error("failed to compute grade", "error", err)
-				return err, 0
+				return 0, err
 			}
 
 			q.Players[i].Score = score
-			return nil, score
+			return score, nil
 		}
 	}
-	return errors.New("failed to find player's game record in history"), 0
+	return 0, errors.New("failed to find player's game record in history")
 }
 
 func (q Quiz) GradeAll() error {
 	for i := range q.Players {
-		err, _ := q.Grade(q.Players[i].Id)
+		_, err := q.Grade(q.Players[i].Id)
 		if err != nil {
 			slog.Error("failed to grade all in quiz", "error", err)
 			return err
@@ -61,10 +61,10 @@ func (q Quiz) GradeAll() error {
 	}
 	return nil
 }
-func (q Quiz) PercentageOverall(playerId int64) (error, float32) {
+func (q Quiz) PercentageOverall(playerId int64) (float32, error) {
 	err := q.GradeAll()
 	if err != nil {
-		return err, 0
+		return 0, err
 	}
 	var idIndex int
 	sort.Slice(q.Players, func(i, j int) bool {
@@ -76,13 +76,13 @@ func (q Quiz) PercentageOverall(playerId int64) (error, float32) {
 		}
 	}
 	if idIndex == 0 {
-		return nil, 0
+		return 0, nil
 	}
 	percentile := float32(idIndex) / float32(len(q.Players))
-	return nil, percentile
+	return percentile, nil
 }
 
-func (q Quiz) Generate() (error, []Question) {
+func (q Quiz) Generate() ([]Question, error) {
 	questions := make([]Question, 5)
 	questions[0].Question = "What color is the sun?"
 	questions[0].Answers = createAnswers("Blue", false, "green", false, "yellow", true, "black", false)
@@ -95,7 +95,7 @@ func (q Quiz) Generate() (error, []Question) {
 	questions[4].Question = "Which subnet mask is the largest (provides the most IP addresses?"
 	questions[4].Answers = createAnswers("/32", false, "/29", false, "/27", false, "/16", true)
 
-	return nil, questions
+	return questions, nil
 }
 
 // Player is the struct to hold the history of a single players past quizzes
@@ -186,4 +186,13 @@ func HasOnlyOneTrue(q Question) bool {
 		counter++
 	}
 	return counter == 1
+}
+
+func (q Quiz) getGradeByPlayerName(name string) (float32, error) {
+	for i := range q.Players {
+		if q.Players[i].Name == name {
+			return q.Players[i].Score, nil
+		}
+	}
+	return 0, errors.New("failed to get grade by player name")
 }
