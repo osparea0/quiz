@@ -13,10 +13,6 @@ type Quizzer interface {
 	PercentageOverall(playerId int64) (error, float32)
 }
 
-type Games struct {
-	Quizzes []Quiz
-}
-
 // Quiz struct holds the fields for a single quiz and implements the Quizzer interface
 type Quiz struct {
 	Id        int64      `json:"id"`
@@ -31,7 +27,11 @@ func NewQuiz() Quiz {
 		slog.Error(err.Error())
 		return q
 	}
-	return Quiz{Id: rand.Int64(), Questions: questions}
+	id := rand.Int64()
+	for id == 0 {
+		id = rand.Int64()
+	}
+	return Quiz{Id: id, Questions: questions}
 }
 
 // Grade takes the player id and computes their grade
@@ -91,6 +91,21 @@ type Player struct {
 	Score   float32    `json:"score"`
 }
 
+func NewPlayer(name string) Player {
+	id := rand.Int64()
+	for id == 0 {
+		id = rand.Int64()
+	}
+	p := Player{
+		Name:    name,
+		Id:      id,
+		QuizId:  0,
+		Answers: nil,
+		Score:   0,
+	}
+	return p
+}
+
 // Question struct holds a single question and all of it's answers
 type Question struct {
 	Question string  `json:"question"`
@@ -128,6 +143,10 @@ func computeGrade(submittedAnswers []Question, correctAnswers []Question) (error
 		if submittedAnswers[i].Answers == correctAnswers[i].Answers {
 			count++
 		}
+	}
+
+	if count == 0 {
+		return nil, 0
 	}
 	score := float32(len(submittedAnswers) / count)
 
