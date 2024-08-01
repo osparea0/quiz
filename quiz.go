@@ -148,7 +148,7 @@ func computeGrade(submittedAnswers []Question, correctAnswers []Question) (error
 	if count == 0 {
 		return nil, 0
 	}
-	score := float32(len(submittedAnswers) / count)
+	score := float32(count) / float32(len(submittedAnswers))
 
 	return nil, score
 }
