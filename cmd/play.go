@@ -4,8 +4,7 @@ Copyright © 2024 NAME HERE <EMAIL ADDRESS>
 package cmd
 
 import (
-	"fmt"
-
+	"github.com/ospfareao/quiz/game"
 	"github.com/spf13/cobra"
 )
 
@@ -15,7 +14,7 @@ var playCmd = &cobra.Command{
 	Short: "Play starts the quiz game",
 	Long:  `Play is used to start the quiz game and presents the player with questions.`,
 	Run: func(cmd *cobra.Command, args []string) {
-		fmt.Println("play called")
+		game.StartService()
 	},
 }
 
