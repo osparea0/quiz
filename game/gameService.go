@@ -1,9 +1,15 @@
-package main
+package game
 
 import (
+	"context"
 	"encoding/json"
+	"errors"
 	"log/slog"
 	"net/http"
+	"os"
+	"os/signal"
+	"syscall"
+	"time"
 )
 
 type GameService struct {
@@ -138,8 +144,8 @@ func (gs *GameService) GetPercentile(w http.ResponseWriter, req *http.Request) {
 	p := struct {
 		Percentile float32 `json:"percentile"`
 	}{}
-	p.percentile = percentile
-	j, err := json.Marshal(p)
+	p.Percentile = percentile
+	j, err := json.Marshal(&p)
 	if err != nil {
 		gs.logger.Error("failed to marshal percentile to json", "error", err)
 		w.WriteHeader(http.StatusInternalServerError)
@@ -151,4 +157,42 @@ func (gs *GameService) GetPercentile(w http.ResponseWriter, req *http.Request) {
 		gs.logger.Error("failed to write response", "error", err)
 	}
 
+}
+
+func startService() {
+	gameSvc := NewGameService()
+	hostname, err := os.Hostname()
+	if err != nil {
+		gameSvc.logger.Error("failed to get hostname from os", "error", err)
+	}
+
+	http.HandleFunc("/registerplayer/", gameSvc.RegisterPlayer)
+	http.HandleFunc("/play/", gameSvc.Play)
+	http.HandleFunc("/submitanswers/", gameSvc.Submit)
+
+	server := &http.Server{
+		Addr: ":8080",
+	}
+
+	go func() {
+		err := server.ListenAndServe()
+		if !errors.Is(err, http.ErrServerClosed) {
+			gameSvc.logger.Error("http server error %v", err)
+		}
+
+		gameSvc.logger.Info("stopped serving new connections", "hostname", hostname)
+	}()
+
+	sigChan := make(chan os.Signal, 1)
+	signal.Notify(sigChan, syscall.SIGINT, syscall.SIGTERM)
+	<-sigChan
+
+	shutdownCtx, shutdownCancel := context.WithTimeout(context.Background(), 10*time.Second)
+	defer shutdownCancel()
+
+	if err := server.Shutdown(shutdownCtx); err != nil {
+		gameSvc.logger.Error("http server shutdown error", "error", err.Error())
+	}
+
+	gameSvc.logger.Info("graceful shutdown complete")
 }
