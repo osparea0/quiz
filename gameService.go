@@ -15,7 +15,7 @@ func NewGameService() *GameService {
 	logger := slog.Default()
 	game, err := NewGame(5)
 	if err != nil {
-		logger.Error("failed to create game", err)
+		logger.Error("failed to create game", "error", err)
 	}
 	return &GameService{game: game, logger: logger}
 }
@@ -103,10 +103,10 @@ func (gs *GameService) GetGrade(w http.ResponseWriter, req *http.Request) {
 		w.WriteHeader(http.StatusInternalServerError)
 	}
 	s := struct {
-		score float32
+		Score float32 `json:"score"`
 	}{}
-	s.score = score
-	j, err := json.Marshal(s)
+	s.Score = score
+	j, err := json.Marshal(&s)
 	if err != nil {
 		gs.logger.Error("failed to marshal score to json", "error", err)
 		w.WriteHeader(http.StatusInternalServerError)
@@ -136,7 +136,7 @@ func (gs *GameService) GetPercentile(w http.ResponseWriter, req *http.Request) {
 		w.WriteHeader(http.StatusInternalServerError)
 	}
 	p := struct {
-		percentile float32
+		Percentile float32 `json:"percentile"`
 	}{}
 	p.percentile = percentile
 	j, err := json.Marshal(p)
