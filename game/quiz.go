@@ -126,6 +126,23 @@ func NewPlayer(name string) Player {
 type Question struct {
 	Question string  `json:"question"`
 	Answers  Answers `json:"answers"`
+	IsRight  bool    `json:"is_right"`
+}
+
+func (q *Question) GetCorrectAnswer() string {
+	if q.Answers.Answer1.IsTrue {
+		return q.Answers.Answer1.Answer
+	}
+	if q.Answers.Answer2.IsTrue {
+		return q.Answers.Answer2.Answer
+	}
+	if q.Answers.Answer3.IsTrue {
+		return q.Answers.Answer3.Answer
+	}
+	if q.Answers.Answer4.IsTrue {
+		return q.Answers.Answer4.Answer
+	}
+	return ""
 }
 
 // Answer holds all possible answers for a single question and is comprised of Answer structs

@@ -6,12 +6,10 @@ package cmd
 import (
 	"bytes"
 	"encoding/json"
-	"errors"
 	"fmt"
 	"io"
 	"log/slog"
 	"net/http"
-	"strconv"
 
 	"github.com/manifoldco/promptui"
 	"github.com/ospfarea0/quiz/game"
@@ -90,7 +88,30 @@ var playCmd = &cobra.Command{
 			slog.Error("failed to unmarshal questions", "error", err)
 		}
 		fmt.Printf("Here are the questions %v", questions)
-		fmt.Printf("You choose %q\n", result)
+		//answers := make([]game.Question, 5)
+		result = ""
+		for i := range questions {
+			prompt := promptui.Select{
+				Label: questions[i].Question,
+				Items: []string{questions[i].Answers.Answer1.Answer, questions[i].Answers.Answer2.Answer,
+					questions[i].Answers.Answer3.Answer, questions[i].Answers.Answer4.Answer},
+			}
+
+			_, result, err := prompt.Run()
+			if err != nil {
+				fmt.Printf("Prompt failed %v\n", err)
+				return
+			}
+			// answer := game.Question{Question: questions[i].Question,
+			// 	Answers: game.Answers{Answer1: questions[i].Answers.Answer1, Answer2: questions[i].Answers.Answer2,
+			// 		Answer3: questions[i].Answers.Answer3, Answer4: questions[i].Answers.Answer4}}
+
+			//answers := append(answers, answer)
+			buildAnswers(questions, result)
+			fmt.Printf("You choose %q\n", result)
+
+		}
+		fmt.Printf("these are the final answers %v", questions)
 	},
 }
 
@@ -108,10 +129,12 @@ func init() {
 	// playCmd.Flags().BoolP("toggle", "t", false, "Help message for toggle")
 }
 
-func validateUserName(input string) error {
-	_, err := strconv.ParseFloat(input, 64)
-	if err != nil {
-		return errors.New("Invalid number")
+func buildAnswers(questions []game.Question, result string) []game.Question {
+	for i := range questions {
+		ans := questions[i].GetCorrectAnswer()
+		if ans == result {
+			questions[i].IsRight = true
+		}
 	}
-	return nil
+	return questions
 }
