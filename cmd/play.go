@@ -4,7 +4,15 @@ Copyright © 2024 NAME HERE <EMAIL ADDRESS>
 package cmd
 
 import (
-	"github.com/ospfareao/quiz/game"
+	"bufio"
+	"encoding/json"
+	"fmt"
+	"io"
+	"log/slog"
+	"net/http"
+	"os"
+
+	"github.com/ospfarea0/quiz/game"
 	"github.com/spf13/cobra"
 )
 
@@ -15,11 +23,43 @@ var playCmd = &cobra.Command{
 	Long:  `Play is used to start the quiz game and presents the player with questions.`,
 	Run: func(cmd *cobra.Command, args []string) {
 		game.StartService()
+		func() {
+			client := &http.Client{}
+			resp, err := client.Get("http://localhost:8080/getgameids")
+			if err != nil {
+				slog.Error("failed to call getgameids in play command", "error", err)
+				return
+			}
+			defer resp.Body.Close()
+			body, err := io.ReadAll(resp.Body)
+			if err != nil {
+				fmt.Println("Error reading response body:", err)
+				return
+			}
+
+			var data []map[string]interface{}
+			if err := json.Unmarshal(body, &data); err != nil {
+				fmt.Println("Error unmarshaling JSON:", err)
+				return
+			}
+			reader := bufio.NewReader(os.Stdin)
+			for _, obj := range data {
+				fmt.Println(obj)
+				fmt.Println("Press 'n' to continue to the next item...")
+				for {
+					input, _ := reader.ReadString('\n')
+					if input != "\n" {
+						break
+					}
+					fmt.Println("Invalid input. Press 'n' to continue.")
+				}
+			}
+
+		}()
 	},
 }
 
 func init() {
-	rootCmd.AddCommand(playCmd)
 
 	// Here you will define your flags and configuration settings.
 

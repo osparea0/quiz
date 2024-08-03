@@ -22,11 +22,6 @@ func NewGame(numberOfQuizzes int) (Game, error) {
 	for i := 0; i < numberOfQuizzes; i++ {
 		quiz := NewQuiz()
 		games[i] = quiz
-		for k, _ := range games {
-			for games[k].Id == quiz.Id && games[k].Id != 0 {
-				quiz = NewQuiz()
-			}
-		}
 	}
 	logger := slog.Default()
 	return Game{games, logger}, nil
@@ -74,10 +69,11 @@ func (g *Game) getPlayer(name string) (bool, Player) {
 
 func (g *Game) getQuizIDs() []int64 {
 	if len(g.Quizzes) == 0 {
+		return []int64{}
 	}
 	ids := make([]int64, len(g.Quizzes))
 	for i := range g.Quizzes {
-		ids = append(ids, g.Quizzes[i].Id)
+		ids[i] = g.Quizzes[i].Id
 	}
 	return ids
 }
