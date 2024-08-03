@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"io"
 	"log/slog"
 	"net/http"
 	"os"
@@ -27,13 +28,27 @@ func NewGameService() *GameService {
 }
 
 func (gs *GameService) RegisterPlayer(w http.ResponseWriter, req *http.Request) {
+	if req.Method != http.MethodPost {
+		gs.logger.Info("Invalid request method")
+		w.WriteHeader(http.StatusMethodNotAllowed)
+		return
+	}
+
+	body, err := io.ReadAll(req.Body)
+	if err != nil {
+		gs.logger.Error("failed to read req body", "error", err)
+		w.WriteHeader(http.StatusInternalServerError)
+		return
+	}
 	newPlayer := struct {
 		Name   string `json:"name"`
 		QuizID int64  `json:"quiz_id"`
 	}{}
-	err := json.NewDecoder(req.Body).Decode(&newPlayer)
+	err = json.Unmarshal(body, &newPlayer)
+	gs.logger.Info("the player payload is", "payload", newPlayer)
 	if err != nil {
 		gs.logger.Error("failed to decode register player request from http request", "error", err)
+		gs.logger.Info("the player payload is", "payload", newPlayer)
 		w.WriteHeader(http.StatusBadRequest)
 		return
 	}
@@ -196,9 +211,9 @@ func StartService() {
 		return
 	}
 
-	http.HandleFunc("/registerplayer/", gameSvc.RegisterPlayer)
-	http.HandleFunc("/play/", gameSvc.Play)
-	http.HandleFunc("/submitanswers/", gameSvc.Submit)
+	http.HandleFunc("/registerplayer", gameSvc.RegisterPlayer)
+	http.HandleFunc("/play", gameSvc.Play)
+	http.HandleFunc("/submitanswers", gameSvc.Submit)
 	http.HandleFunc("/getgameids", gameSvc.GetGameIDs)
 
 	server := &http.Server{

@@ -1,0 +1,10 @@
+POST http://localhost:8080/registerplayer
+content-type: application/json
+
+{
+    "name": "Dave",
+    "quiz_id": 5500242681648729530
+}
+
+
+
