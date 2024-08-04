@@ -27,13 +27,13 @@ func NewGame(numberOfQuizzes int) (Game, error) {
 	return Game{games, logger}, nil
 }
 
-func (g *Game) addPlayer(name string, quizID int64) error {
+func (g *Game) addPlayerToQuiz(name string, quizID int64) error {
 	IsFound, _ := g.getPlayer(name)
 	if IsFound {
 		g.logger.Error("player name already exists")
 		return errors.New("player name already exists")
 	}
-	player := NewPlayer(name)
+	player := NewPlayer(name, quizID)
 	for i := range g.Quizzes {
 		if g.Quizzes[i].Id == quizID {
 			player.QuizId = quizID
@@ -46,13 +46,17 @@ func (g *Game) addPlayer(name string, quizID int64) error {
 }
 
 func (g *Game) submitAnswers(player Player) error {
-	err, quiz := g.getQuizByID(player.QuizId)
+	err, q := g.getQuizByID(player.QuizId)
 	if err != nil {
 		g.logger.Error(err.Error())
 		return err
 	}
 
-	quiz.Players = append(quiz.Players, player)
+	for i := range q.Players {
+		if q.Players[i].Id == player.Id {
+			q.Players[i] = player
+		}
+	}
 	return nil
 }
 

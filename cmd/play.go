@@ -47,30 +47,38 @@ var playCmd = &cobra.Command{
 			slog.Error("failed to get game ids", "error", err)
 		}
 
-		ids := make([]int64, 1)
+		ids := make([]int64, 5)
 		err = json.Unmarshal(body, &ids)
 		if err != nil {
 			slog.Error("error unmarshaling json", "error", err)
 		}
 
-		player := struct {
-			Name   string `json:"name"`
-			QuizID int64  `json:"quiz_id"`
-		}{}
+		player := game.Player{}
 
 		player.Name = result
-		player.QuizID = ids[0]
+		player.QuizId = ids[0]
 		data, err := json.Marshal(player)
 		if err != nil {
 			slog.Error("failed to marshal player into json", "error", err)
 		}
 
-		_, err = client.Post("http://localhost:8080/registerplayer", "application/json", bytes.NewReader(data))
+		resp, err = client.Post("http://localhost:8080/registerplayer", "application/json", bytes.NewReader(data))
 		if err != nil {
 			slog.Error("failed to post player", "error", err)
 		}
 
-		resp, err = client.Post("http://localhost:8080/play", "application/json", bytes.NewReader(data))
+		body, err = io.ReadAll(resp.Body)
+		defer resp.Body.Close()
+		if err != nil {
+			slog.Error("failed to read response body after registering player", "error", err)
+		}
+		updatedPlayer := game.Player{}
+		err = json.Unmarshal(body, &updatedPlayer)
+		if err != nil {
+			slog.Error("failed to unmarshal into updateplayer", "error", err)
+		}
+
+		resp, err = client.Post("http://localhost:8080/play", "application/json", bytes.NewReader(body))
 		if err != nil {
 			slog.Error("failed to post to play", "error", err, "postData", data)
 		}
@@ -87,7 +95,6 @@ var playCmd = &cobra.Command{
 		if err != nil {
 			slog.Error("failed to unmarshal questions", "error", err)
 		}
-		fmt.Printf("Here are the questions %v", questions)
 		//answers := make([]game.Question, 5)
 		result = ""
 		for i := range questions {
@@ -102,16 +109,72 @@ var playCmd = &cobra.Command{
 				fmt.Printf("Prompt failed %v\n", err)
 				return
 			}
-			// answer := game.Question{Question: questions[i].Question,
-			// 	Answers: game.Answers{Answer1: questions[i].Answers.Answer1, Answer2: questions[i].Answers.Answer2,
-			// 		Answer3: questions[i].Answers.Answer3, Answer4: questions[i].Answers.Answer4}}
 
-			//answers := append(answers, answer)
 			buildAnswers(questions, result)
+
 			fmt.Printf("You choose %q\n", result)
 
 		}
-		fmt.Printf("these are the final answers %v", questions)
+		updatedPlayer.Answers = questions
+		data, err = json.Marshal(updatedPlayer)
+		if err != nil {
+			slog.Error("failed to marshal player", "error", err)
+			return
+		}
+
+		resp, err = client.Post("http://localhost:8080/submitanswers", "application/json", bytes.NewReader(data))
+		if err != nil {
+			slog.Error("failed to post to submitanswers", "error", err)
+			return
+		}
+
+		if resp.StatusCode != http.StatusOK {
+			slog.Error("failed to post to submitanswers", "error", err, "http code", resp.StatusCode)
+			return
+		}
+
+		resp, err = client.Post("http://localhost:8080/getgrade", "application/json", bytes.NewReader(data))
+		if err != nil {
+			slog.Error("failed tro getgrade", "error", err)
+			return
+		}
+		defer resp.Body.Close()
+		gradeBody, err := io.ReadAll(resp.Body)
+		if err != nil {
+			slog.Error("failed to read response body while getting grade", "error", err)
+		}
+
+		s := struct {
+			Score float32 `json:"score"`
+		}{}
+
+		err = json.Unmarshal(gradeBody, &s)
+		if err != nil {
+			slog.Error("failed to unmarshal into score", "error", err)
+		}
+
+		resp, err = client.Post("http://localhost:8080/getpercentile", "application/json", bytes.NewReader(data))
+		if err != nil {
+			slog.Error("failed to get percentile", "error", err)
+			return
+		}
+		defer resp.Body.Close()
+		percentileBody, err := io.ReadAll(resp.Body)
+		if err != nil {
+			slog.Error("failed to read response body while getting grade", "error", err)
+		}
+
+		percentile := struct {
+			Percentile float32 `json:"percentile"`
+		}{}
+
+		err = json.Unmarshal(percentileBody, &percentile)
+		if err != nil {
+			slog.Error("failed to unmarshal into percentile", "error", err)
+		}
+
+		fmt.Printf("Your score is: %2f\n", s.Score)
+		fmt.Printf("Your percentile is: %2f\n", percentile.Percentile)
 	},
 }
 

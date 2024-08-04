@@ -36,13 +36,18 @@ func TestQuiz_Grade(t *testing.T) {
 	questions, _ := q.Generate()
 	submittedAnswersWithOneWrong := make([]Question, 5)
 	submittedAnswersWithOneWrong[0].Question = "What color is the sun?"
+	submittedAnswersWithOneWrong[0].IsRight = true
 	submittedAnswersWithOneWrong[0].Answers = createAnswers("Blue", false, "green", false, "yellow", true, "black", false)
 	submittedAnswersWithOneWrong[1].Question = "Amazon does not have which of these named services?"
+	submittedAnswersWithOneWrong[1].IsRight = true
 	submittedAnswersWithOneWrong[1].Answers = createAnswers("Route 53", false, "Elastic Container Registry", false, "Elastic Beanstalk", false, "Elastic Monkey", true)
 	submittedAnswersWithOneWrong[2].Question = "Which of these are not google cloud services?"
+	submittedAnswersWithOneWrong[2].IsRight = true
 	submittedAnswersWithOneWrong[2].Answers = createAnswers("Cloud Run", false, "Cloud SQL", false, "GKE", false, "Cloud Slide", true)
 	submittedAnswersWithOneWrong[3].Question = "What color is the sea?"
+	submittedAnswersWithOneWrong[3].IsRight = true
 	submittedAnswersWithOneWrong[3].Answers = createAnswers("Yellow", false, "Purple", false, "Black", false, "Blue", true)
+	submittedAnswersWithOneWrong[4].IsRight = false
 	submittedAnswersWithOneWrong[4].Question = "Which subnet mask is the largest (provides the most IP addresses?"
 	submittedAnswersWithOneWrong[4].Answers = createAnswers("/32", true, "/29", false, "/27", false, "/16", false)
 	players := make([]Player, 2)
@@ -76,11 +81,11 @@ func TestQuiz_Grade(t *testing.T) {
 		want   error
 		want1  float32
 	}{
-		{name: "one hundred percent correct",
+		{name: "one hundred percent incorrect",
 			fields: fields{Id: 0, Players: players, Questions: questions},
 			args:   args{id: 0},
 			want:   nil,
-			want1:  1},
+			want1:  0},
 		{name: "80 percent correct",
 			fields: fields{Id: 1, Players: players, Questions: questions},
 			args:   args{id: 1},
@@ -109,21 +114,43 @@ func TestQuiz_PercentageOverall(t *testing.T) {
 	q := NewQuiz()
 	submittedAnswersWithOneWrong := make([]Question, 5)
 	submittedAnswersWithOneWrong[0].Question = "What color is the sun?"
+	submittedAnswersWithOneWrong[0].IsRight = true
 	submittedAnswersWithOneWrong[0].Answers = createAnswers("Blue", false, "green", false, "yellow", true, "black", false)
 	submittedAnswersWithOneWrong[1].Question = "Amazon does not have which of these named services?"
+	submittedAnswersWithOneWrong[1].IsRight = true
 	submittedAnswersWithOneWrong[1].Answers = createAnswers("Route 53", false, "Elastic Container Registry", false, "Elastic Beanstalk", false, "Elastic Monkey", true)
 	submittedAnswersWithOneWrong[2].Question = "Which of these are not google cloud services?"
+	submittedAnswersWithOneWrong[2].IsRight = true
 	submittedAnswersWithOneWrong[2].Answers = createAnswers("Cloud Run", false, "Cloud SQL", false, "GKE", false, "Cloud Slide", true)
 	submittedAnswersWithOneWrong[3].Question = "What color is the sea?"
+	submittedAnswersWithOneWrong[3].IsRight = true
 	submittedAnswersWithOneWrong[3].Answers = createAnswers("Yellow", false, "Purple", false, "Black", false, "Blue", true)
+	submittedAnswersWithOneWrong[4].IsRight = false
 	submittedAnswersWithOneWrong[4].Question = "Which subnet mask is the largest (provides the most IP addresses?"
 	submittedAnswersWithOneWrong[4].Answers = createAnswers("/32", true, "/29", false, "/27", false, "/16", false)
+
+	questionsAllCorrect := make([]Question, 5)
+	questionsAllCorrect[0].Question = "What color is the sun?"
+	questionsAllCorrect[0].IsRight = true
+	questionsAllCorrect[0].Answers = createAnswers("Blue", false, "green", false, "yellow", true, "black", false)
+	questionsAllCorrect[1].Question = "Amazon does not have which of these named services?"
+	questionsAllCorrect[1].IsRight = true
+	questionsAllCorrect[1].Answers = createAnswers("Route 53", false, "Elastic Container Registry", false, "Elastic Beanstalk", false, "Elastic Monkey", true)
+	questionsAllCorrect[2].Question = "Which of these are not google cloud services?"
+	questionsAllCorrect[2].IsRight = true
+	questionsAllCorrect[2].Answers = createAnswers("Cloud Run", false, "Cloud SQL", false, "GKE", false, "Cloud Slide", true)
+	questionsAllCorrect[3].Question = "What color is the sea?"
+	questionsAllCorrect[3].IsRight = true
+	questionsAllCorrect[3].Answers = createAnswers("Yellow", false, "Purple", false, "Black", false, "Blue", true)
+	questionsAllCorrect[4].IsRight = true
+	questionsAllCorrect[4].Question = "Which subnet mask is the largest (provides the most IP addresses?"
+	questionsAllCorrect[4].Answers = createAnswers("/32", true, "/29", false, "/27", false, "/16", false)
 	players := make([]Player, 2)
 	players[0] = Player{
 		Name:    "Test Player 1",
 		Id:      0,
 		QuizId:  q.Id,
-		Answers: q.Questions,
+		Answers: questionsAllCorrect,
 		Score:   0,
 	}
 	players[1] = Player{

@@ -40,12 +40,8 @@ func (gs *GameService) RegisterPlayer(w http.ResponseWriter, req *http.Request) 
 		w.WriteHeader(http.StatusInternalServerError)
 		return
 	}
-	newPlayer := struct {
-		Name   string `json:"name"`
-		QuizID int64  `json:"quiz_id"`
-	}{}
+	newPlayer := Player{}
 	err = json.Unmarshal(body, &newPlayer)
-	gs.logger.Info("the player payload is", "payload", newPlayer)
 	if err != nil {
 		gs.logger.Error("failed to decode register player request from http request", "error", err)
 		gs.logger.Info("the player payload is", "payload", newPlayer)
@@ -53,20 +49,34 @@ func (gs *GameService) RegisterPlayer(w http.ResponseWriter, req *http.Request) 
 		return
 	}
 
-	err = gs.game.addPlayer(newPlayer.Name, newPlayer.QuizID)
+	err = gs.game.addPlayerToQuiz(newPlayer.Name, newPlayer.QuizId)
 	if err != nil {
 		gs.logger.Error("failed to add player to game", "error", err)
 		w.WriteHeader(http.StatusInternalServerError)
 		return
 	}
+
+	ok, player := gs.game.getPlayer(newPlayer.Name)
+	if !ok {
+		gs.logger.Error("failed to get player in register player", "error", err)
+		return
+	}
+	j, err := json.Marshal(player)
+	if err != nil {
+		gs.logger.Error("failed to marshal player in registerplayer", "error", err)
+		return
+	}
 	w.WriteHeader(http.StatusOK)
+	w.Header().Set("Content-Type", "application/json")
+	_, err = w.Write(j)
+	if err != nil {
+		gs.logger.Error("failed to write in registerplayer", "error", err)
+		return
+	}
 }
 
 func (gs *GameService) Play(w http.ResponseWriter, req *http.Request) {
-	player := struct {
-		Name   string `json:"name"`
-		QuizID int64  `json:"quiz_id"`
-	}{}
+	player := Player{}
 	err := json.NewDecoder(req.Body).Decode(&player)
 	if err != nil {
 		gs.logger.Error("failed to decode player request from http request", "error", err)
@@ -74,7 +84,8 @@ func (gs *GameService) Play(w http.ResponseWriter, req *http.Request) {
 		w.WriteHeader(http.StatusBadRequest)
 		return
 	}
-	questions, err := gs.game.getQuestionsByQuizID(player.QuizID)
+
+	questions, err := gs.game.getQuestionsByQuizID(player.QuizId)
 	if err != nil {
 		gs.logger.Error("failed to get questions from game", "error", err)
 		w.WriteHeader(http.StatusInternalServerError)
@@ -128,7 +139,7 @@ func (gs *GameService) GetGrade(w http.ResponseWriter, req *http.Request) {
 		gs.logger.Error("failed to grade all quiz", "error", err)
 		return
 	}
-	score, err := quiz.getGradeByPlayerName(player.Name)
+	score, err := quiz.getGradeByPlayerID(player.Id)
 	if err != nil {
 		gs.logger.Error("failed to get grade by player name", "error", err)
 		w.WriteHeader(http.StatusInternalServerError)
@@ -203,6 +214,16 @@ func (gs *GameService) GetGameIDs(w http.ResponseWriter, req *http.Request) {
 	w.Write(j)
 }
 
+func (gs *GameService) PrintQuiz(w http.ResponseWriter, req *http.Request) {
+	w.WriteHeader(http.StatusOK)
+	j, err := json.Marshal(gs.game)
+	if err != nil {
+		gs.logger.Error("failed to marshal quiz into json", "error", err)
+		return
+	}
+	w.Write(j)
+}
+
 func StartService() {
 	gameSvc := NewGameService()
 	hostname, err := os.Hostname()
@@ -215,6 +236,9 @@ func StartService() {
 	http.HandleFunc("/play", gameSvc.Play)
 	http.HandleFunc("/submitanswers", gameSvc.Submit)
 	http.HandleFunc("/getgameids", gameSvc.GetGameIDs)
+	http.HandleFunc("/getgrade", gameSvc.GetGrade)
+	http.HandleFunc("/printquiz", gameSvc.PrintQuiz)
+	http.HandleFunc("/getpercentile", gameSvc.GetPercentile)
 
 	server := &http.Server{
 		Addr: ":8080",

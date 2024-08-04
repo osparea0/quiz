@@ -2,6 +2,7 @@ package game
 
 import (
 	"errors"
+	"fmt"
 	"log/slog"
 	"math/rand/v2"
 	"sort"
@@ -35,7 +36,7 @@ func NewQuiz() Quiz {
 }
 
 // Grade takes the player id and computes their grade
-func (q Quiz) Grade(ID int64) (float32, error) {
+func (q *Quiz) Grade(ID int64) (float32, error) {
 	for i := 0; i < len(q.Players); i++ {
 		if q.Players[i].Id == ID {
 			err, score := computeGrade(q.Players[i].Answers, q.Questions)
@@ -51,38 +52,48 @@ func (q Quiz) Grade(ID int64) (float32, error) {
 	return 0, errors.New("failed to find player's game record in history")
 }
 
-func (q Quiz) GradeAll() error {
+func (q *Quiz) GradeAll() error {
 	for i := range q.Players {
-		_, err := q.Grade(q.Players[i].Id)
+		grade, err := q.Grade(q.Players[i].Id)
 		if err != nil {
 			slog.Error("failed to grade all in quiz", "error", err)
 			return err
 		}
+		slog.Info("gradeAll", "grade", grade)
 	}
 	return nil
 }
-func (q Quiz) PercentageOverall(playerId int64) (float32, error) {
+func (q *Quiz) PercentageOverall(playerId int64) (float32, error) {
 	err := q.GradeAll()
 	if err != nil {
 		return 0, err
 	}
-	var idIndex int
+	var idIndex int = -1
 	sort.Slice(q.Players, func(i, j int) bool {
 		return q.Players[i].Score < q.Players[j].Score
 	})
+
 	for i := range q.Players {
 		if q.Players[i].Id == playerId {
 			idIndex = i
+			break
 		}
 	}
-	if idIndex == 0 {
-		return 0, nil
+
+	if len(q.Players) == 1 {
+		return 1.0, nil
 	}
-	percentile := float32(idIndex) / float32(len(q.Players))
+
+	if idIndex == -1 {
+		return 0, fmt.Errorf("player ID %d not found", playerId)
+	}
+
+	percentile := float32(idIndex) / float32(len(q.Players)-1) * 100
+	slog.Info("logging percentile", "percentile", percentile)
 	return percentile, nil
 }
 
-func (q Quiz) Generate() ([]Question, error) {
+func (q *Quiz) Generate() ([]Question, error) {
 	questions := make([]Question, 5)
 	questions[0].Question = "What color is the sun?"
 	questions[0].Answers = createAnswers("Blue", false, "green", false, "yellow", true, "black", false)
@@ -107,7 +118,7 @@ type Player struct {
 	Score   float32    `json:"score"`
 }
 
-func NewPlayer(name string) Player {
+func NewPlayer(name string, quizID int64) Player {
 	id := rand.Int64()
 	for id == 0 {
 		id = rand.Int64()
@@ -115,7 +126,7 @@ func NewPlayer(name string) Player {
 	p := Player{
 		Name:    name,
 		Id:      id,
-		QuizId:  0,
+		QuizId:  quizID,
 		Answers: nil,
 		Score:   0,
 	}
@@ -169,11 +180,8 @@ func createAnswers(ans1 string, ans1bool bool, ans2 string, ans2bool bool, ans3 
 
 func computeGrade(submittedAnswers []Question, correctAnswers []Question) (error, float32) {
 	count := 0
-	if len(submittedAnswers) != len(correctAnswers) {
-		return errors.New("number of submitted answers do not match number of questions"), 0
-	}
 	for i := 0; i < len(submittedAnswers); i++ {
-		if submittedAnswers[i].Answers == correctAnswers[i].Answers {
+		if submittedAnswers[i].IsRight {
 			count++
 		}
 	}
@@ -205,9 +213,9 @@ func HasOnlyOneTrue(q Question) bool {
 	return counter == 1
 }
 
-func (q Quiz) getGradeByPlayerName(name string) (float32, error) {
+func (q *Quiz) getGradeByPlayerID(ID int64) (float32, error) {
 	for i := range q.Players {
-		if q.Players[i].Name == name {
+		if q.Players[i].Id == ID {
 			return q.Players[i].Score, nil
 		}
 	}
