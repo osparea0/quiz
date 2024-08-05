@@ -1,12 +1,12 @@
 ## Quiz CLI 
 
-Quiz a CLI based quiz application that asks the users multiple choice questions and allows them to select only one answer. It's written in Go and uses the [Cobra]https://github.com/spf13/cobra library as well as [promptui]https://github.com/manifoldco/promptui . 
+Quiz a CLI based quiz application that asks the users multiple choice questions and allows them to select only one answer. It's written in Go and uses the [Cobra](https://github.com/spf13/cobra) library as well as [promptui](https://github.com/manifoldco/promptui) . 
 
 ### How To
 
 ### Install requirements
 
-You will need to have Go installed in order to install the CLI app. You can follow the instructions for installing it here https://go.dev/ . The git CLI is also required https://git-scm.com/downloads . Once Go and Git are installed, clone the repository into a local directory using `git clone git@github.com:osparea0/quiz.git` . Once the clone is completed, `cd ./quiz` and run `go install` .
+You will need to have Go installed in order to install the CLI app. You can follow the instructions for installing it [here](https://go.dev) . The [git CLI](https://git-scm.com/downloads) is also required . Once Go and Git are installed, clone the repository into a local directory using `git clone git@github.com:osparea0/quiz.git` . Once the clone is completed, `cd ./quiz` and run `go install` .
 
 ### Running the app
 
