@@ -95,7 +95,7 @@ var playCmd = &cobra.Command{
 		if err != nil {
 			slog.Error("failed to unmarshal questions", "error", err)
 		}
-		//answers := make([]game.Question, 5)
+		answers := make([]game.Question, 0)
 		result = ""
 		for i := range questions {
 			prompt := promptui.Select{
@@ -110,12 +110,18 @@ var playCmd = &cobra.Command{
 				return
 			}
 
-			buildAnswers(questions, result)
+			if result == questions[i].GetCorrectAnswer() {
+				questions[i].IsRight = true
+				answers = append(answers, questions[i])
+			}
 
-			fmt.Printf("You choose %q\n", result)
+			if result != questions[i].GetCorrectAnswer() {
+				questions[i].IsRight = false
+				answers = append(answers, questions[i])
+			}
 
 		}
-		updatedPlayer.Answers = questions
+		updatedPlayer.Answers = answers
 		data, err = json.Marshal(updatedPlayer)
 		if err != nil {
 			slog.Error("failed to marshal player", "error", err)
@@ -173,8 +179,8 @@ var playCmd = &cobra.Command{
 			slog.Error("failed to unmarshal into percentile", "error", err)
 		}
 
-		fmt.Printf("Your score is: %2f\n", s.Score)
-		fmt.Printf("Your percentile is: %2f\n", percentile.Percentile)
+		fmt.Printf("Your score is: %.0f%%\n", s.Score*100)
+		fmt.Printf("Your percentile is: %.0f%%\n", percentile.Percentile)
 	},
 }
 
@@ -190,14 +196,4 @@ func init() {
 	// Cobra supports local flags which will only run when this command
 	// is called directly, e.g.:
 	// playCmd.Flags().BoolP("toggle", "t", false, "Help message for toggle")
-}
-
-func buildAnswers(questions []game.Question, result string) []game.Question {
-	for i := range questions {
-		ans := questions[i].GetCorrectAnswer()
-		if ans == result {
-			questions[i].IsRight = true
-		}
-	}
-	return questions
 }

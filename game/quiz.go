@@ -39,7 +39,7 @@ func NewQuiz() Quiz {
 func (q *Quiz) Grade(ID int64) (float32, error) {
 	for i := 0; i < len(q.Players); i++ {
 		if q.Players[i].Id == ID {
-			err, score := computeGrade(q.Players[i].Answers, q.Questions)
+			score, err := computeGrade(q.Players[i].Answers)
 			if err != nil {
 				slog.Error("failed to compute grade", "error", err)
 				return 0, err
@@ -54,41 +54,48 @@ func (q *Quiz) Grade(ID int64) (float32, error) {
 
 func (q *Quiz) GradeAll() error {
 	for i := range q.Players {
-		grade, err := q.Grade(q.Players[i].Id)
+		_, err := q.Grade(q.Players[i].Id)
 		if err != nil {
 			slog.Error("failed to grade all in quiz", "error", err)
 			return err
 		}
-		slog.Info("gradeAll", "grade", grade)
 	}
 	return nil
 }
+
 func (q *Quiz) PercentageOverall(playerId int64) (float32, error) {
 	err := q.GradeAll()
 	if err != nil {
 		return 0, err
 	}
-	var idIndex int = -1
+
+	if len(q.Players) == 0 {
+		return 0, errors.New("no players in quiz")
+	}
+
+	if len(q.Players) == 1 {
+		return 100, nil
+	}
+
 	sort.Slice(q.Players, func(i, j int) bool {
-		return q.Players[i].Score < q.Players[j].Score
+		return q.Players[i].Score > q.Players[j].Score // Sort in descending order
 	})
 
-	for i := range q.Players {
-		if q.Players[i].Id == playerId {
+	var idIndex int
+	found := false
+	for i, player := range q.Players {
+		if player.Id == playerId {
 			idIndex = i
+			found = true
 			break
 		}
 	}
 
-	if len(q.Players) == 1 {
-		return 1.0, nil
-	}
-
-	if idIndex == -1 {
+	if !found {
 		return 0, fmt.Errorf("player ID %d not found", playerId)
 	}
 
-	percentile := float32(idIndex) / float32(len(q.Players)-1) * 100
+	percentile := float32(len(q.Players)-idIndex-1) / float32(len(q.Players)-1) * 100
 	slog.Info("logging percentile", "percentile", percentile)
 	return percentile, nil
 }
@@ -178,7 +185,7 @@ func createAnswers(ans1 string, ans1bool bool, ans2 string, ans2bool bool, ans3 
 	return Answers{Answer1: Answer1, Answer2: Answer2, Answer3: Answer3, Answer4: Answer4}
 }
 
-func computeGrade(submittedAnswers []Question, correctAnswers []Question) (error, float32) {
+func computeGrade(submittedAnswers []Question) (float32, error) {
 	count := 0
 	for i := 0; i < len(submittedAnswers); i++ {
 		if submittedAnswers[i].IsRight {
@@ -187,11 +194,11 @@ func computeGrade(submittedAnswers []Question, correctAnswers []Question) (error
 	}
 
 	if count == 0 {
-		return nil, 0
+		return 0, nil
 	}
 	score := float32(count) / float32(len(submittedAnswers))
 
-	return nil, score
+	return score, nil
 }
 
 // HasOnlyOneTrue ensures there is only one true answer

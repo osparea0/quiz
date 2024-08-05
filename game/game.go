@@ -55,6 +55,7 @@ func (g *Game) submitAnswers(player Player) error {
 	for i := range q.Players {
 		if q.Players[i].Id == player.Id {
 			q.Players[i] = player
+			slog.Info("logging submitted player", "player", player)
 		}
 	}
 	return nil
