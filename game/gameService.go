@@ -18,9 +18,9 @@ type GameService struct {
 	logger *slog.Logger
 }
 
-func NewGameService() *GameService {
+func NewGameService(numberOfGames int) *GameService {
 	logger := slog.Default()
-	game, err := NewGame(5)
+	game, err := NewGame(numberOfGames)
 	if err != nil {
 		logger.Error("failed to create game", "error", err)
 	}
@@ -225,7 +225,7 @@ func (gs *GameService) PrintQuiz(w http.ResponseWriter, req *http.Request) {
 }
 
 func StartService() {
-	gameSvc := NewGameService()
+	gameSvc := NewGameService(5)
 	hostname, err := os.Hostname()
 	if err != nil {
 		gameSvc.logger.Error("failed to get hostname from os", "error", err)

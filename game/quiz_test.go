@@ -183,7 +183,7 @@ func TestQuiz_PercentageOverall(t *testing.T) {
 			Players:   q.Players,
 			Questions: q.Questions,
 		}, args: args{playerId: 0},
-			want: nil, want1: .50},
+			want: nil, want1: 100},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {

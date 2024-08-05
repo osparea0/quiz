@@ -1,7 +1,7 @@
-## Quiz backend REST API
+## Quiz CLI 
 
-Quiz is a backend REST API for a quiz application. It's written in Go and runs in a docker container for ease of deployment. 
+Quiz a CLI based quiz application that asks the users multiple choice questions and allows them to select only one answer. It's written in Go and uses the [Cobra]https://github.com/spf13/cobra library as well as [promptui]https://github.com/manifoldco/promptui . 
 
-### Client CLI
+### How To
 
-The client CLI is a command line interface that allows you to interact with the server over HTTP. https://github.com/osparea0/quiz_client
+
