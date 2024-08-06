@@ -11,12 +11,21 @@ type Game struct {
 	logger  *slog.Logger
 }
 
-func NewGame(numberOfQuizzes int) (Game, error) {
+type Gamer interface {
+	addPlayerToQuiz(name string, quizID int64) error
+	submitAnswers(player Player) error
+	getPlayer(name string) (bool, Player)
+	getQuizIDs() []int64
+	getQuestionsByQuizID(quizID int64) ([]Question, error)
+	getQuizByID(id int64) (*Quiz, error)
+}
+
+func NewGame(numberOfQuizzes int) (*Game, error) {
 	if numberOfQuizzes <= 0 {
-		return Game{}, errors.New("number of quizzes must be greater than 0")
+		return &Game{}, errors.New("number of quizzes must be greater than 0")
 	}
 	if numberOfQuizzes > 10 {
-		return Game{}, errors.New("number of quizzes must be less than 10")
+		return &Game{}, errors.New("number of quizzes must be less than 10")
 	}
 	games := make([]Quiz, numberOfQuizzes)
 	for i := 0; i < numberOfQuizzes; i++ {
@@ -24,7 +33,7 @@ func NewGame(numberOfQuizzes int) (Game, error) {
 		games[i] = quiz
 	}
 	logger := slog.Default()
-	return Game{games, logger}, nil
+	return &Game{games, logger}, nil
 }
 
 func (g *Game) addPlayerToQuiz(name string, quizID int64) error {
@@ -46,7 +55,7 @@ func (g *Game) addPlayerToQuiz(name string, quizID int64) error {
 }
 
 func (g *Game) submitAnswers(player Player) error {
-	err, q := g.getQuizByID(player.QuizId)
+	q, err := g.getQuizByID(player.QuizId)
 	if err != nil {
 		g.logger.Error(err.Error())
 		return err
@@ -55,7 +64,6 @@ func (g *Game) submitAnswers(player Player) error {
 	for i := range q.Players {
 		if q.Players[i].Id == player.Id {
 			q.Players[i] = player
-			slog.Info("logging submitted player", "player", player)
 		}
 	}
 	return nil
@@ -93,12 +101,12 @@ func (g *Game) getQuestionsByQuizID(quizID int64) ([]Question, error) {
 	return []Question{}, errors.New("quiz not found")
 }
 
-func (g *Game) getQuizByID(id int64) (error, *Quiz) {
+func (g *Game) getQuizByID(id int64) (*Quiz, error) {
 	for i := range g.Quizzes {
 		if g.Quizzes[i].Id == id {
-			return nil, &g.Quizzes[i]
+			return &g.Quizzes[i], nil
 		}
 	}
 	g.logger.Error("failed to find quiz by id %d", "id", fmt.Sprint(id))
-	return errors.New("quiz not found"), &Quiz{}
+	return &Quiz{}, errors.New("quiz not found")
 }

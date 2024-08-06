@@ -14,7 +14,7 @@ import (
 )
 
 type GameService struct {
-	game   Game
+	game   Gamer
 	logger *slog.Logger
 }
 
@@ -76,6 +76,12 @@ func (gs *GameService) RegisterPlayer(w http.ResponseWriter, req *http.Request) 
 }
 
 func (gs *GameService) Play(w http.ResponseWriter, req *http.Request) {
+	if req.Method != http.MethodPost {
+		gs.logger.Info("Invalid request method")
+		w.WriteHeader(http.StatusMethodNotAllowed)
+		return
+	}
+
 	player := Player{}
 	err := json.NewDecoder(req.Body).Decode(&player)
 	if err != nil {
@@ -91,12 +97,14 @@ func (gs *GameService) Play(w http.ResponseWriter, req *http.Request) {
 		w.WriteHeader(http.StatusInternalServerError)
 		return
 	}
+
 	json, err := json.Marshal(questions)
 	if err != nil {
 		gs.logger.Error("failed to marshal questions to json", "error", err)
 		w.WriteHeader(http.StatusInternalServerError)
 		return
 	}
+
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusOK)
 	_, err = w.Write(json)
@@ -106,6 +114,12 @@ func (gs *GameService) Play(w http.ResponseWriter, req *http.Request) {
 }
 
 func (gs *GameService) Submit(w http.ResponseWriter, req *http.Request) {
+	if req.Method != http.MethodPost {
+		gs.logger.Info("Invalid request method")
+		w.WriteHeader(http.StatusMethodNotAllowed)
+		return
+	}
+
 	var player Player
 	err := json.NewDecoder(req.Body).Decode(&player)
 	if err != nil {
@@ -113,6 +127,7 @@ func (gs *GameService) Submit(w http.ResponseWriter, req *http.Request) {
 		w.WriteHeader(http.StatusBadRequest)
 		return
 	}
+
 	err = gs.game.submitAnswers(player)
 	if err != nil {
 		gs.logger.Error("failed to submit player to game", "error", err)
@@ -123,6 +138,12 @@ func (gs *GameService) Submit(w http.ResponseWriter, req *http.Request) {
 }
 
 func (gs *GameService) GetGrade(w http.ResponseWriter, req *http.Request) {
+	if req.Method != http.MethodPost {
+		gs.logger.Info("Invalid request method")
+		w.WriteHeader(http.StatusMethodNotAllowed)
+		return
+	}
+
 	var player Player
 	err := json.NewDecoder(req.Body).Decode(&player)
 	if err != nil {
@@ -130,21 +151,26 @@ func (gs *GameService) GetGrade(w http.ResponseWriter, req *http.Request) {
 		w.WriteHeader(http.StatusBadRequest)
 		return
 	}
-	err, quiz := gs.game.getQuizByID(player.QuizId)
+
+	quiz, err := gs.game.getQuizByID(player.QuizId)
 	if err != nil {
 		gs.logger.Error("failed to get quiz", "error", err)
+		return
 	}
+
 	err = quiz.GradeAll()
 	if err != nil {
 		gs.logger.Error("failed to grade all quiz", "error", err)
 		return
 	}
+
 	score, err := quiz.getGradeByPlayerID(player.Id)
 	if err != nil {
 		gs.logger.Error("failed to get grade by player name", "error", err)
 		w.WriteHeader(http.StatusInternalServerError)
 		return
 	}
+
 	s := struct {
 		Score float32 `json:"score"`
 	}{}
@@ -155,6 +181,7 @@ func (gs *GameService) GetGrade(w http.ResponseWriter, req *http.Request) {
 		w.WriteHeader(http.StatusInternalServerError)
 		return
 	}
+
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusOK)
 	_, err = w.Write(j)
@@ -165,6 +192,12 @@ func (gs *GameService) GetGrade(w http.ResponseWriter, req *http.Request) {
 }
 
 func (gs *GameService) GetPercentile(w http.ResponseWriter, req *http.Request) {
+	if req.Method != http.MethodPost {
+		gs.logger.Info("Invalid request method")
+		w.WriteHeader(http.StatusMethodNotAllowed)
+		return
+	}
+
 	var player Player
 	err := json.NewDecoder(req.Body).Decode(&player)
 	if err != nil {
@@ -172,17 +205,20 @@ func (gs *GameService) GetPercentile(w http.ResponseWriter, req *http.Request) {
 		w.WriteHeader(http.StatusBadRequest)
 		return
 	}
-	err, quiz := gs.game.getQuizByID(player.QuizId)
+
+	quiz, err := gs.game.getQuizByID(player.QuizId)
 	if err != nil {
 		gs.logger.Error("failed to get quiz", "error", err)
 		return
 	}
+
 	percentile, err := quiz.PercentageOverall(player.Id)
 	if err != nil {
 		gs.logger.Error("failed to get quiz percentile", "error", err)
 		w.WriteHeader(http.StatusInternalServerError)
 		return
 	}
+
 	p := struct {
 		Percentile float32 `json:"percentile"`
 	}{}
@@ -193,6 +229,7 @@ func (gs *GameService) GetPercentile(w http.ResponseWriter, req *http.Request) {
 		w.WriteHeader(http.StatusInternalServerError)
 		return
 	}
+
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusOK)
 	_, err = w.Write(j)
@@ -204,6 +241,12 @@ func (gs *GameService) GetPercentile(w http.ResponseWriter, req *http.Request) {
 }
 
 func (gs *GameService) GetGameIDs(w http.ResponseWriter, req *http.Request) {
+	if req.Method != http.MethodGet {
+		gs.logger.Info("Invalid request method")
+		w.WriteHeader(http.StatusMethodNotAllowed)
+		return
+	}
+
 	IDs := gs.game.getQuizIDs()
 	w.WriteHeader(http.StatusOK)
 	j, err := json.Marshal(IDs)
@@ -211,16 +254,24 @@ func (gs *GameService) GetGameIDs(w http.ResponseWriter, req *http.Request) {
 		gs.logger.Error("failed to marshal Ids into json", "error", err)
 		return
 	}
+
 	w.Write(j)
 }
 
 func (gs *GameService) PrintQuiz(w http.ResponseWriter, req *http.Request) {
+	if req.Method != http.MethodGet {
+		gs.logger.Info("Invalid request method")
+		w.WriteHeader(http.StatusMethodNotAllowed)
+		return
+	}
+
 	w.WriteHeader(http.StatusOK)
 	j, err := json.Marshal(gs.game)
 	if err != nil {
 		gs.logger.Error("failed to marshal quiz into json", "error", err)
 		return
 	}
+
 	w.Write(j)
 }
 
