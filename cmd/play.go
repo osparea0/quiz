@@ -38,127 +38,25 @@ var playCmd = &cobra.Command{
 		}
 
 		client := http.Client{}
-		resp, err := client.Get("http://localhost:8080/getgameids")
+
+		data, err := getGameIds(client, result)
 		if err != nil {
 			slog.Error("failed to get game ids", "error", err)
-		}
-
-		body, err := io.ReadAll(resp.Body)
-		if err != nil {
-			slog.Error("failed to get game ids", "error", err)
-		}
-
-		ids := make([]int64, 5)
-		err = json.Unmarshal(body, &ids)
-		if err != nil {
-			slog.Error("error unmarshaling json", "error", err)
-		}
-
-		player := game.Player{}
-
-		player.Name = result
-
-		promptSelect := promptui.Select{
-			Label: "select the game ID you'd like to play",
-			Items: ids,
-		}
-
-		_, result, err = promptSelect.Run()
-		if err != nil {
-			fmt.Printf("Prompt failed %v\n", err)
-			return
-		}
-		quizID, err := strconv.Atoi(result)
-		if err != nil {
-			slog.Error("failed to parse index from string", "error", err)
-		}
-
-		index := 0
-		for i := range ids {
-			if ids[i] == int64(quizID) {
-				index = i
-			}
-		}
-
-		player.QuizId = ids[index]
-		data, err := json.Marshal(player)
-		if err != nil {
-			slog.Error("failed to marshal player into json", "error", err)
-		}
-
-		resp, err = client.Post("http://localhost:8080/registerplayer", "application/json", bytes.NewReader(data))
-		if err != nil {
-			slog.Error("failed to post player", "error", err)
-		}
-
-		body, err = io.ReadAll(resp.Body)
-		defer resp.Body.Close()
-		if err != nil {
-			slog.Error("failed to read response body after registering player", "error", err)
-		}
-		updatedPlayer := game.Player{}
-		err = json.Unmarshal(body, &updatedPlayer)
-		if err != nil {
-			slog.Error("failed to unmarshal into updateplayer", "error", err)
-		}
-
-		resp, err = client.Post("http://localhost:8080/play", "application/json", bytes.NewReader(body))
-		if err != nil {
-			slog.Error("failed to post to play", "error", err, "postData", data)
-		}
-
-		body, err = io.ReadAll(resp.Body)
-		defer resp.Body.Close()
-
-		if err != nil {
-			slog.Error("failed to read response body in play", "error", err)
-		}
-
-		questions := make([]game.Question, 5)
-		err = json.Unmarshal(body, &questions)
-		if err != nil {
-			slog.Error("failed to unmarshal questions", "error", err)
-		}
-		answers := make([]game.Question, 0)
-		result = ""
-		for i := range questions {
-			prompt := promptui.Select{
-				Label: questions[i].Question,
-				Items: []string{questions[i].Answers.Answer1.Answer, questions[i].Answers.Answer2.Answer,
-					questions[i].Answers.Answer3.Answer, questions[i].Answers.Answer4.Answer},
-			}
-
-			_, result, err := prompt.Run()
-			if err != nil {
-				fmt.Printf("Prompt failed %v\n", err)
-				return
-			}
-
-			if result == questions[i].GetCorrectAnswer() {
-				questions[i].IsRight = true
-				answers = append(answers, questions[i])
-			}
-
-			if result != questions[i].GetCorrectAnswer() {
-				questions[i].IsRight = false
-				answers = append(answers, questions[i])
-			}
-
-		}
-		updatedPlayer.Answers = answers
-		data, err = json.Marshal(updatedPlayer)
-		if err != nil {
-			slog.Error("failed to marshal player", "error", err)
 			return
 		}
 
-		resp, err = client.Post("http://localhost:8080/submitanswers", "application/json", bytes.NewReader(data))
+		updatedPlayer, err := registerPlayer(client, data)
 		if err != nil {
-			slog.Error("failed to post to submitanswers", "error", err)
-			return
+			slog.Error("failed to register player", "error", err)
 		}
 
-		if resp.StatusCode != http.StatusOK {
+		data, err = play(client, updatedPlayer)
+		if err != nil {
+			slog.Error("failed to call play", "error", err)
+		}
+
+		resp, err := client.Post("http://localhost:8080/submitanswers", "application/json", bytes.NewReader(data))
+		if err != nil || resp.StatusCode != http.StatusOK {
 			slog.Error("failed to post to submitanswers", "error", err, "http code", resp.StatusCode)
 			return
 		}
@@ -220,4 +118,139 @@ func init() {
 	// Cobra supports local flags which will only run when this command
 	// is called directly, e.g.:
 	// playCmd.Flags().BoolP("toggle", "t", false, "Help message for toggle")
+}
+
+// GetGameIds gets the game IDs from the api and displays them for the player to choose which game to play
+// It returns the player struct marshaled into json/[]byte
+func getGameIds(client http.Client, result string) ([]byte, error) {
+	resp, err := client.Get("http://localhost:8080/getgameids")
+	if err != nil {
+		slog.Error("failed to get game ids", "error", err)
+	}
+
+	body, err := io.ReadAll(resp.Body)
+	if err != nil {
+		slog.Error("failed to get game ids", "error", err)
+	}
+
+	ids := make([]int64, 5)
+	err = json.Unmarshal(body, &ids)
+	if err != nil {
+		slog.Error("error unmarshaling json", "error", err)
+	}
+
+	player := game.Player{}
+
+	player.Name = result
+
+	promptSelect := promptui.Select{
+		Label: "select the game ID you'd like to play",
+		Items: ids,
+	}
+
+	_, result, err = promptSelect.Run()
+	if err != nil {
+		fmt.Printf("Prompt failed %v\n", err)
+		return []byte{}, err
+	}
+	quizID, err := strconv.Atoi(result)
+	if err != nil {
+		slog.Error("failed to parse index from string", "error", err)
+	}
+
+	index := 0
+	for i := range ids {
+		if ids[i] == int64(quizID) {
+			index = i
+		}
+	}
+
+	player.QuizId = ids[index]
+	data, err := json.Marshal(player)
+	if err != nil {
+		slog.Error("failed to marshal player into json", "error", err)
+		return []byte{}, err
+	}
+
+	return data, nil
+}
+
+// registerPlayer takes the json encoded player and registers them to their chosen game via the api.
+// The return value is a json encoded player with their chosen quiz information.
+func registerPlayer(client http.Client, player []byte) ([]byte, error) {
+	resp, err := client.Post("http://localhost:8080/registerplayer", "application/json", bytes.NewReader(player))
+	if err != nil {
+		slog.Error("failed to post player", "error", err)
+	}
+
+	player, err = io.ReadAll(resp.Body)
+	defer resp.Body.Close()
+	if err != nil {
+		slog.Error("failed to read response body after registering player", "error", err)
+		return []byte{}, err
+	}
+
+	return player, err
+}
+
+// play takes a json encoded player and hits the play API where questions are returned to the player. The player must then choose among the returned questions.
+func play(client http.Client, updatedPlayer []byte) ([]byte, error) {
+	resp, err := client.Post("http://localhost:8080/play", "application/json", bytes.NewReader(updatedPlayer))
+	if err != nil {
+		slog.Error("failed to post to play", "error", err, "postData", updatedPlayer)
+	}
+
+	body, err := io.ReadAll(resp.Body)
+	defer resp.Body.Close()
+
+	if err != nil {
+		slog.Error("failed to read response body in play", "error", err)
+	}
+
+	questions := make([]game.Question, 5)
+	err = json.Unmarshal(body, &questions)
+	if err != nil {
+		slog.Error("failed to unmarshal questions", "error", err)
+	}
+	answers := make([]game.Question, 0)
+
+	for i := range questions {
+		prompt := promptui.Select{
+			Label: questions[i].Question,
+			Items: []string{questions[i].Answers.Answer1.Answer, questions[i].Answers.Answer2.Answer,
+				questions[i].Answers.Answer3.Answer, questions[i].Answers.Answer4.Answer},
+		}
+
+		_, result, err := prompt.Run()
+		if err != nil {
+			fmt.Printf("Prompt failed %v\n", err)
+			return []byte{}, err
+		}
+
+		if result == questions[i].GetCorrectAnswer() {
+			questions[i].IsRight = true
+			answers = append(answers, questions[i])
+		}
+
+		if result != questions[i].GetCorrectAnswer() {
+			questions[i].IsRight = false
+			answers = append(answers, questions[i])
+		}
+
+	}
+
+	player := game.Player{}
+	err = json.Unmarshal(updatedPlayer, &player)
+	if err != nil {
+		slog.Error("failed to unmarshal updated player", "error", err)
+	}
+
+	player.Answers = answers
+	data, err := json.Marshal(player)
+	if err != nil {
+		slog.Error("failed to marshal player", "error", err)
+		return []byte{}, err
+	}
+
+	return data, nil
 }
