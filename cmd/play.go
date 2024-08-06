@@ -10,6 +10,7 @@ import (
 	"io"
 	"log/slog"
 	"net/http"
+	"strconv"
 
 	"github.com/manifoldco/promptui"
 	"github.com/ospfarea0/quiz/game"
@@ -56,7 +57,30 @@ var playCmd = &cobra.Command{
 		player := game.Player{}
 
 		player.Name = result
-		player.QuizId = ids[0]
+
+		promptSelect := promptui.Select{
+			Label: "select the game ID you'd like to play",
+			Items: ids,
+		}
+
+		_, result, err = promptSelect.Run()
+		if err != nil {
+			fmt.Printf("Prompt failed %v\n", err)
+			return
+		}
+		quizID, err := strconv.Atoi(result)
+		if err != nil {
+			slog.Error("failed to parse index from string", "error", err)
+		}
+
+		index := 0
+		for i := range ids {
+			if ids[i] == int64(quizID) {
+				index = i
+			}
+		}
+
+		player.QuizId = ids[index]
 		data, err := json.Marshal(player)
 		if err != nil {
 			slog.Error("failed to marshal player into json", "error", err)
