@@ -78,7 +78,7 @@ func (q *Quiz) PercentageOverall(playerId int64) (float32, error) {
 	}
 
 	sort.Slice(q.Players, func(i, j int) bool {
-		return q.Players[i].Score > q.Players[j].Score // Sort in descending order
+		return q.Players[i].Score > q.Players[j].Score
 	})
 
 	var idIndex int
@@ -96,7 +96,6 @@ func (q *Quiz) PercentageOverall(playerId int64) (float32, error) {
 	}
 
 	percentile := float32(len(q.Players)-idIndex-1) / float32(len(q.Players)-1) * 100
-	slog.Info("logging percentile", "percentile", percentile)
 	return percentile, nil
 }
 

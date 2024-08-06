@@ -247,7 +247,7 @@ func StartService() {
 	go func() {
 		err := server.ListenAndServe()
 		if !errors.Is(err, http.ErrServerClosed) {
-			gameSvc.logger.Error("http server error %v", err)
+			gameSvc.logger.Error("http server error", "error", err)
 		}
 
 		gameSvc.logger.Info("stopped serving new connections", "hostname", hostname)
